@@ -1,7 +1,411 @@
 <html>
-  <head></head>
+  <head>
+    <link rel="icon" type="image/png" href="https://avatars.githubusercontent.com/u/64783050">
+    <title>Baskouting - AI for Basketball Scouting</title>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.6.2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.6.2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.6.2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.6.2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.6.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="./css/base.css">
+    <script type="text/javascript" src="./js/load_stats.js"></script>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <style>
+      #tableStats {
+        border-collapse: collapse;
+      }
+
+      #tableStats th, #tableStats td {
+        padding: 5px;
+        text-align: center;
+        border: 1px solid #bbb
+      }
+    </style>
+  </head>
   <body>
-    <h1>Hello world!</h1>
-    <p>Hey</p>
-  </body>
+      <h1>Baskouting - AI for Basketball Scouting</h1>
+      <div class="content">
+        <div id="teamsMenu" class="teams-menu"></div>
+        <div id="toc">
+          <ol>
+            <li><a href="#tableStatsTitle">Stats at a Glance</a></li>
+            <li><a href="#statsPlotTitle">Interactive Stats Plot</a></li>
+            <li><a href="#aiTracking">AI Analysis</a></li>
+          </ol>
+        </div>
+        <div>
+          <h2 id="tableStatsTitle">Stats at a Glance</h2>
+          <table id="tableStats"></table>
+        </div>
+        <h2 id="statsPlotTitle">Interactive Stats Plot</h2>
+          <div id="statsPlotContainer">
+            
+          <div id="statsPlotSelectors">
+            <div>
+              <label for="xVariable">Horizontal axis:</label>
+              <select id="xVariable" name="xVariable" onchange="plotSomething()"></select>
+            </div>
+            <div>
+              <label for="yVariable">Vertical axis:</label>
+              <select id="yVariable" name="yVariable" onchange="plotSomething()"></select>
+            </div>
+            <div>
+              <label for="hVariables">Select labels:</label>
+              <div id="hVariables"></div>
+            </div>
+          </div>
+          <div id="statsPlot"></div>
+        </div>
+        <div id="aiTracking">
+          <h2>AI Analysis</h2>
+          <div style="display: flex; gap: 20px">
+            <div>
+              <div>
+                <label>Video a analizar: </label><input type="file" id="videoInput" accept="video/*">
+              </div>
+              <div>
+                <video id="videoPlayer" controls muted style="max-width: 100%; display: none"></video>
+              </div>
+            </div>
+            <div>
+              <div>
+                <button id="uploadButton" disabled>Detectar jugadores con IA</button>
+              </div>
+              <div>
+                <button id="trackButton" disabled>Registrar movimientos con IA</button>
+              </div>
+              <div>
+                <img id="displayImage" alt="Image will appear here" style="max-width: 100%; display: none">
+                <video id="displayVideo" controls muted style="max-width: 100%; display: none"></video>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          function csvToObjectArray(csvString) {
+            // Split the CSV string into rows
+            const rows = csvString.split('\n');
+
+            // Extract the header row
+            const headers = rows[0].split(',');
+
+            // Create an array to hold the objects
+            const objectArray = [];
+
+            // Iterate over the remaining rows (data rows)
+            for (let i = 1; i < rows.length; i++) {
+              if (rows[i]) { // Ensure there is data in the row
+                const values = rows[i].split(',');
+
+
+                
+                // Create an object for this row
+                const obj = {};
+                headers.forEach((header, index) => {
+
+                  const parsedValue = parseFloat(values[index].trim());
+
+                  // Check if the parsed value is NaN (Not-a-Number)
+                  if (isNaN(parsedValue)) {
+                      v =  values[index].trim();
+                  } else {
+                      // Return the parsed value as an integer if it's a whole number, otherwise as a float
+                      v = Number.isInteger(parsedValue) ? parseInt(parsedValue) : parseFloat(parsedValue.toFixed(2));
+                  }
+
+
+                  obj[header.trim()] = v
+                });
+                
+                // Add the object to the array
+                objectArray.push(obj);
+              }
+            }
+
+            return objectArray;
+          }
+
+          function getDistinctValues(data, fieldName) {
+            // Create a set to store unique values
+            const uniqueValues = new Set();
+
+            // Iterate over each object in the array
+            data.forEach(item => {
+              if (item[fieldName]) {
+                // Add the value to the set
+                uniqueValues.add(item[fieldName]);
+              }
+            });
+
+            // Convert the set to an array and return it
+            return Array.from(uniqueValues);
+          }
+
+          async function getCSVStringsForIDs(gameArray, team_id) {
+            // Initialize an array to hold the CSV strings
+            const csvStrings = [];
+
+            // Iterate over each ID and make a GET request
+            jornada = 0
+            for (let game of gameArray) {
+              id = game.Link.split("?p=")[1]
+              
+              try {
+                const response = await axios.get(`./data/feb/24-25/games/${id}.csv`);
+                if (response.status === 200 && response.data) {
+                  game_stats = csvToObjectArray(response.data)
+                  console.log(game_stats, team_id)
+                  csvStrings.push(game_stats.filter(x => x.equipo === team_id));
+                } else {
+                  console.error(`Failed to fetch data for ID ${id}. Status: ${response.status}`);
+                }
+              } catch (error) {
+                console.error(`Error fetching data for ID ${id}`);
+              }
+            }
+
+            return csvStrings.flat();
+          }
+
+          function aggregateStats(data, type, field, player){
+            values = data.filter(x => x.nombre_jugador === player).map(x => x[field])
+            if (type === "sum"){
+              return values.reduce((partialSum, a) => partialSum + +(a), 0)
+            }
+          }
+
+          function generateHTMLTable(data) {
+            console.log(data)
+            if (data.length === 0 || data[0] === undefined) {
+              return '<table><tr><td>No data available</td></tr></table>';
+            }
+
+            // Get the headers from the keys of the first object
+            const headers = Object.keys(data[0]);
+
+            // Start building the table string
+            let htmlTable = '<tr>\n';
+            headers.forEach(header => {
+              htmlTable += `    <th title="${window.columns_description[header].description}">${window.columns_description[header].title}</th>\n`;
+            });
+            htmlTable += '  </tr>\n';
+
+            // Create the data rows
+            data.forEach(item => {
+              htmlTable += '  <tr>\n';
+              headers.forEach(header => {
+                htmlTable += `    <td>${item[header]}</td>\n`.replace("_ ", ", ");
+              });
+              htmlTable += '  </tr>\n';
+            });
+
+            tableStats.innerHTML = htmlTable;
+          }
+
+          function loadTeamStats(div) {
+            team = div.innerHTML.slice(2)
+            team_games = window.calendar.data.filter(game => 
+              game.Local === team || game.Visitante === team
+            )
+            team_id = window.team_to_id[team]
+            console.log(team, team_id)
+            getCSVStringsForIDs(team_games, team_id)
+            .then((data) => {
+              window.data = Object.keys(data[0]).reduce((acc, key) => ({ ...acc, [key]: data.map(item => item[key]) }), {});
+              window.agg_stats = {}
+
+              fields_and_aggregators = {
+                // "dorsal": get_unique,
+                // "partidos": "sum",
+                "inicial": "sum",
+                "minutos": "mean",
+                "puntos": "mean",
+                "rebotes_total": "mean",
+                "asistencias": "mean",
+                "recuperaciones": "mean",
+                "perdidas": "mean",
+                "tapones_favor": "mean",
+                "valoracion": "mean",
+                "t2s": "mean",
+                "t2a": "mean",
+                "t3s": "mean",
+                "t3a": "mean",
+                "t1s": "mean",
+                "t1a": "mean",
+                "rebotes_ofensivos": "mean",
+                "rebotes_defensivos": "mean",
+                "tapones_contra": "mean",
+                "mates": "mean",
+                "faltas_cometidas": "mean",
+                "faltas_recibidas": "mean",
+                "balance": "sum",
+              }
+              
+              data.forEach(item => {
+                for ([k,agg] of Object.entries(fields_and_aggregators)){
+                  if (item.nombre_jugador && item[k] !== undefined) {
+                    // If the player already exists in the groupedData, add the value to its sum
+                    if (!window.agg_stats[item.nombre_jugador]) {
+                      window.agg_stats[item.nombre_jugador] = {}
+                    }
+                    if (window.agg_stats[item.nombre_jugador][k]){
+                      window.agg_stats[item.nombre_jugador][k] += +(item[k]);
+                    } else {
+                      // Otherwise, initialize the sum for this player
+                      window.agg_stats[item.nombre_jugador][k] = +(item[k]);
+                    }
+                  }
+                }
+              })
+              generateHTMLTable(Object.keys(window.agg_stats).map(key => ({ nombre_jugador: key, ...window.agg_stats[key] })))
+              loadStats()
+            })
+          }
+
+          
+
+          document.addEventListener("DOMContentLoaded", () => {
+            axios.get('./data/feb/24-25/calendario.csv')
+            .then(function (response) {
+              window.calendar = {};
+              window.calendar.raw = response.data
+              window.calendar.data = csvToObjectArray(response.data)
+              window.calendar.teams = getDistinctValues(window.calendar.data, "Local").sort()
+              teamsMenu.innerHTML = window.calendar.teams.map(x => `<div>&rarr; ${x}</div>`).join("")
+              teamsMenu.querySelectorAll("div").forEach(div => div.addEventListener("click", () => loadTeamStats(div)))
+            })
+          })
+          
+          window.team_to_id = {
+            "CBI ELCHE X MAXIWATT": 951375,
+            "REAL MURCIA BALONCESTO": 952561,
+            "SERVIGROUP BENIDORM": 950773,
+            "LUCENTUM ALICANTE": 950778,
+            "ESET ONTINET": 950876,
+            "DENIA BASQUET": 950772,
+            "C.B. JORGE JUAN TÁRTAROS GONZALO CASTELLÓ": 952559,
+            "SERCOMOSA MOLINA BASKET": 951421,
+            "ADESAVI A": 950873,
+            "UCAM MURCIA JUVER C.B.": 951085,
+            "KLINIK · PM CAROLINAS": 950835,
+            "CLUB BÀSQUET SUECA VIDRIOLA INMOBLES": 950777,
+            "RIGALLI ALGINET": 952153
+          }
+
+          window.columns_description = {
+    "inicial": {
+        "title": "I",
+        "description": "Games started."
+    },
+    "dorsal": {
+        "title": "Num",
+        "description": "Player number."
+    },
+    "nombre_jugador": {
+        "title": "Player",
+        "description": ""
+    },
+    "minutos": {
+        "title": "MIN",
+        "description": "Minutes per game."
+    },
+    "puntos": {
+        "title": "PT",
+        "description": "Points per game."
+    },
+    "rebotes_ofensivos": {
+        "title": "RO",
+        "description": "Offensive rebounds per game."
+    },
+    "rebotes_defensivos": {
+        "title": "RD",
+        "description": "Defensive rebounds per game."
+    },
+    "rebotes_total": {
+        "title": "RT",
+        "description": "Total rebounds per game."
+    },
+    "asistencias": {
+        "title": "AS",
+        "description": "Assists per game."
+    },
+    "recuperaciones": {
+        "title": "BR",
+        "description": "Steals per game."
+    },
+    "perdidas": {
+        "title": "BP",
+        "description": "Turnovers per game."
+    },
+    "tapones_favor": {
+        "title": "TF",
+        "description": "Blocks per game."
+    },
+    "tapones_contra": {
+        "title": "TC",
+        "description": "Received blocks per game."
+    },
+    "mates": {
+        "title": "MT",
+        "description": "Dunks per game."
+    },
+    "faltas_cometidas": {
+        "title": "FC",
+        "description": "Fouls per game."
+    },
+    "faltas_recibidas": {
+        "title": "FR",
+        "description": "Fouls received per game."
+    },
+    "valoracion": {
+        "title": "VA",
+        "description": "Valoration per game."
+    },
+    "balance": {
+        "title": "Balance",
+        "description": "+/- balance for team when player is on the court."
+    },
+    "t1s": {
+        "title": "TL",
+        "description": "Free throws scored per game."
+    },
+    "t1a": {
+        "title": "TLI",
+        "description": "Free throws attempted per game."
+    },
+    "t2s": {
+        "title": "T2",
+        "description": "2-point shots scored per game."
+    },
+    "t2a": {
+        "title": "T2I",
+        "description": "2-point shots attempted per game."
+    },
+    "t3s": {
+        "title": "T3",
+        "description": "3-point shots scored per game."
+    },
+    "t3a": {
+        "title": "T3I",
+        "description": "3-point shots attempted per game."
+    },
+    "partidos": {
+        "title": "P",
+        "description": "Games played."
+    },
+    "jornada": {
+        "title": "Jornada",
+        "description": "Game."
+    },
+    "rival": {
+        "title": "Oponente",
+        "description": "Opponent."
+    }
+}
+        </script>
+      </div>
+    </body>
 </html>

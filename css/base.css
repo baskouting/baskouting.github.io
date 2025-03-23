@@ -1,0 +1,108 @@
+body, * {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #eee;
+  }
+  
+  h1, h2 {
+    text-align: center;
+  }
+  .content {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .content > div {
+    margin: 0px auto 20px;
+  }
+  
+  .teams-menu {
+    font-size: small;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .teams-menu div {
+    display: inline-block;
+    border: 1px solid black;
+    padding: 5px;
+    border-radius: 5px;
+    margin: 2px 5px;
+    cursor: pointer
+  }
+  
+  .teams-menu div:hover {
+    background-color: #ccc;
+  }
+  
+  .teams-menu a {
+    color: black;
+    text-decoration: none;
+  }
+  
+  #toc a {
+    color: black;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  
+  .dataframe {
+    border-collapse: collapse;
+      margin: 25px 0;
+      font-size: 0.9em;
+      font-family: sans-serif;
+      min-width: 400px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  .dataframe thead th {
+    background-color: black;
+    color: white;
+  }
+  
+  .dataframe tbody tr:hover {
+    background-color: #ccc;
+  }
+  
+  .dataframe td, .dataframe th {
+    padding: 5px;
+    text-align: center;
+  }
+  
+  table.dataframe thead tr:nth-child(2) {
+    display: none
+  }
+  
+  #statsPlotContainer {
+    display: flex
+  }
+  
+  #hVariables div  {
+    cursor: pointer
+  }
+  
+  #xVariable, #yVariable {
+    margin-bottom: 10px;
+  }
+  
+  
+  #videoContainer {
+    position: relative;
+    display: inline-block;
+  }
+  #videoPlayer {
+    display: block;
+    max-width: 100%;
+  }
+  #overlayCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  
+  #aiTracking {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+  }
